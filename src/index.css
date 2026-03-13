@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:root {
+  --bg:             #08080e;
+  --surface:        rgba(255,255,255,0.055);
+  --surface-hover:  rgba(255,255,255,0.09);
+  --surface-active: rgba(255,255,255,0.13);
+  --border:         rgba(255,255,255,0.10);
+  --border-strong:  rgba(255,255,255,0.20);
+  --text:           rgba(255,255,255,0.94);
+  --text-2:         rgba(255,255,255,0.55);
+  --text-3:         rgba(255,255,255,0.28);
+  --accent:         #e11d48;
+  --accent-2:       #f472b6;
+  --accent-glow:    rgba(225,29,72,0.28);
+  --green:          #10b981;
+  --green-glow:     rgba(16,185,129,0.28);
+  --red:            #ef4444;
+  --red-glow:       rgba(239,68,68,0.28);
+  --gold:           #f59e0b;
+  --glass:          blur(28px) saturate(180%);
+  --r-xl:           22px;
+  --r-lg:           16px;
+  --r-md:           12px;
+  --r-sm:           8px;
+  --nav-h:          72px;
+  --font-jp:        'Noto Sans JP', serif;
+  --font-ui:        'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+}
+
+#root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+button { font-family: var(--font-ui); cursor: pointer; }
+input, select { font-family: var(--font-ui); }
