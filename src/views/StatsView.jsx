@@ -1,14 +1,36 @@
 // StatsView.jsx — Progress and statistics
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 const MAX_LEVEL     = 7
 const CIRCUMFERENCE = 2 * Math.PI * 45
 
-export default function StatsView({ active, store, allCards }) {
+export default function StatsView({ active, store, allCards, updateStore, showToast, onResetProgress }) {
   const { t } = useTranslation()
   const ringRef = useRef(null)
+  const [confirming, setConfirming] = useState(false)
+
+  function handleReset() {
+    if (!confirming) {
+      setConfirming(true)
+      // Auto-cancel confirm state after 3s
+      setTimeout(() => setConfirming(false), 3000)
+      return
+    }
+    updateStore(s => ({
+      ...s,
+      srData:         {},
+      totalCorrect:   0,
+      totalIncorrect: 0,
+      todayStudied:   0,
+      streak:         0,
+      lastStudyDate:  '',
+    }))
+    setConfirming(false)
+    showToast('✓ Progress reset')
+    onResetProgress()
+  }
 
   const total  = allCards.length
   let mastered = 0, learning = 0, newCards = 0
@@ -35,9 +57,9 @@ export default function StatsView({ active, store, allCards }) {
   }, [active, ringOffset])
 
   const typeStats = [
-    { id: 'hiragana', label: 'Hiragana',       color: '#6366f1', cards: allCards.filter(c => c.type === 'hiragana') },
-    { id: 'katakana', label: 'Katakana',        color: '#a855f7', cards: allCards.filter(c => c.type === 'katakana') },
-    { id: 'vocab',    label: t('vocab_label'),  color: '#e11d48', cards: allCards.filter(c => c.type === 'vocab' || c.type === 'custom') },
+    { id: 'hiragana', label: 'Hiragana',      color: '#6366f1', cards: allCards.filter(c => c.type === 'hiragana') },
+    { id: 'katakana', label: 'Katakana',       color: '#a855f7', cards: allCards.filter(c => c.type === 'katakana') },
+    { id: 'vocab',    label: t('vocab_label'), color: '#e11d48', cards: allCards.filter(c => c.type === 'vocab' || c.type === 'custom') },
   ].map(row => {
     const done = row.cards.filter(c => (store.srData[c.id]?.level ?? 0) >= MAX_LEVEL).length
     const pct  = row.cards.length ? Math.round(done / row.cards.length * 100) : 0
@@ -82,7 +104,7 @@ export default function StatsView({ active, store, allCards }) {
               </svg>
               <div className="ring-label">
                 <div className="ring-pct">{masteredPct}%</div>
-                <div className="ring-sub">Domínio</div>
+                <div className="ring-sub">Mastery</div>
               </div>
             </div>
 
@@ -145,6 +167,21 @@ export default function StatsView({ active, store, allCards }) {
               <span className="type-count">{row.done}/{row.cards.length}</span>
             </div>
           ))}
+        </div>
+
+        {/* Reset progress */}
+        <div className="glass" style={{ padding: '16px 20px', textAlign: 'center' }}>
+          <button
+            className={`reset-btn ${confirming ? 'reset-btn-confirm' : ''}`}
+            onClick={handleReset}
+          >
+            {confirming ? '⚠ Tap again to confirm reset' : '🗑 Reset all progress'}
+          </button>
+          {confirming && (
+            <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)' }}>
+              This will erase all SR data and stats. Custom cards are kept.
+            </div>
+          )}
         </div>
 
       </div>

@@ -9,6 +9,9 @@ export default {
   filter_hiragana: 'ひ Hiragana',
   filter_katakana: 'カ Katakana',
   filter_vocab:    '語 Vocab',
+  source_default: 'Default',
+  source_custom:  'My Cards',
+  source_all:     'All',
 
   // Card
   card_hint:   '↕ Tap to reveal',

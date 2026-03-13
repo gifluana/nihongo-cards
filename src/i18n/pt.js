@@ -7,6 +7,9 @@ export default {
   filter_hiragana: 'ひ Hiragana',
   filter_katakana: 'カ Katakana',
   filter_vocab:    '語 Vocab',
+  source_default: 'Padrão',
+  source_custom:  'Meus Cards',
+  source_all:     'Todos',
 
   card_hint:   '↕ Toque para revelar',
   card_new:    '✦ Nova',

@@ -21,6 +21,7 @@ const defaultStore = {
   streak:         0,
   lastStudyDate:  '',
   studyFilter:    'all',
+  cardSource:     'default',
 }
 
 function dateKey(d = new Date()) {
@@ -41,6 +42,7 @@ export default function App() {
   const [store, setStore] = useState(loadStore)
   const [activeTab,  setActiveTab]  = useState('study')
   const [loadPhase,  setLoadPhase]  = useState('in')
+  const [sessionKey, setSessionKey] = useState(0)  // increment to force new session
   const [toast, setToast] = useState({ msg: '', show: false })
   const toastTimer = useRef(null)
 
@@ -143,11 +145,15 @@ export default function App() {
             allCards={allCards}
             updateStore={updateStore}
             showToast={showToast}
+            sessionKey={sessionKey}
           />
           <StatsView
             active={activeTab === 'stats'}
             store={store}
             allCards={allCards}
+            updateStore={updateStore}
+            showToast={showToast}
+            onResetProgress={() => setSessionKey(k => k + 1)}
           />
           <EditorView
             active={activeTab === 'editor'}

@@ -11,9 +11,17 @@ const SR_INTERVALS = [
 const MAX_LEVEL    = 7
 const SESSION_SIZE = 20
 
-function buildQueue(allCards, srData, filter) {
+function buildQueue(allCards, srData, filter, source) {
   const now  = Date.now()
-  let cards  = filter === 'all' ? allCards : allCards.filter(c => c.type === filter)
+
+  // 1. Filter by source
+  let cards
+  if      (source === 'default') cards = allCards.filter(c => !c.id.startsWith('c_'))
+  else if (source === 'custom')  cards = allCards.filter(c =>  c.id.startsWith('c_'))
+  else                           cards = allCards
+
+  // 2. Filter by category
+  if (filter !== 'all') cards = cards.filter(c => c.type === filter)
 
   const due = cards.filter(c => {
     const sr = srData[c.id]
@@ -66,7 +74,7 @@ function typeName(t) {
   return { hiragana: 'Hiragana', katakana: 'Katakana', vocab: 'Vocab', custom: 'Custom' }[t] || t
 }
 
-export default function StudyView({ active, store, allCards, updateStore, showToast }) {
+export default function StudyView({ active, store, allCards, updateStore, showToast, sessionKey }) {
   const { t, i18n } = useTranslation()
   const lang = i18n.language
 
@@ -77,37 +85,80 @@ export default function StudyView({ active, store, allCards, updateStore, showTo
   const [phase,        setPhase]        = useState('studying')
   const [sessionStats, setSessionStats] = useState({ correct: 0, incorrect: 0 })
 
+  // Refs so effects always read the latest values without going stale
   const storeRef    = useRef(store)
   const allCardsRef = useRef(allCards)
+  const phaseRef    = useRef('studying')
+  const queueRef    = useRef([])
+  const initializedRef = useRef(false)
+
   useEffect(() => { storeRef.current    = store    }, [store])
   useEffect(() => { allCardsRef.current = allCards }, [allCards])
 
+  function setPhaseSync(p) {
+    phaseRef.current = p
+    setPhase(p)
+  }
+
   function startNewSession() {
     const s = storeRef.current
-    const q = buildQueue(allCardsRef.current, s.srData, s.studyFilter)
+    const q = buildQueue(allCardsRef.current, s.srData, s.studyFilter, s.cardSource)
+    queueRef.current = q
     setQueue(q)
     setIdx(0)
     setFlipped(false)
     setShowAnswers(false)
     setSessionStats({ correct: 0, incorrect: 0 })
-    setPhase(q.length === 0 ? 'empty' : 'studying')
+    setPhaseSync(q.length === 0 ? 'empty' : 'studying')
   }
 
+  // Tab switch — preserve session if mid-session
   const wasActiveRef = useRef(false)
   useEffect(() => {
-    if (active && !wasActiveRef.current) startNewSession()
+    if (active && !wasActiveRef.current) {
+      if (!initializedRef.current || phaseRef.current === 'complete') {
+        startNewSession()
+        initializedRef.current = true
+      }
+      // Mid-session tab switch → do nothing, preserve queue/idx
+    }
     wasActiveRef.current = active
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active])
 
+  // Filter chip changed — only rebuild if NOT mid-session
+  // Category filter changed — always restart
   const prevFilterRef = useRef(store.studyFilter)
   useEffect(() => {
     if (store.studyFilter !== prevFilterRef.current) {
       prevFilterRef.current = store.studyFilter
-      if (active) startNewSession()
+      startNewSession()
+      initializedRef.current = true
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store.studyFilter])
+
+  // Card source (Default / My Cards / All) changed — always restart
+  const prevSourceRef = useRef(store.cardSource)
+  useEffect(() => {
+    if (store.cardSource !== prevSourceRef.current) {
+      prevSourceRef.current = store.cardSource
+      startNewSession()
+      initializedRef.current = true
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.cardSource])
+
+  // Stats reset — always force a fresh session
+  const prevSessionKeyRef = useRef(sessionKey)
+  useEffect(() => {
+    if (sessionKey !== prevSessionKeyRef.current) {
+      prevSessionKeyRef.current = sessionKey
+      startNewSession()
+      initializedRef.current = true
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionKey])
 
   function handleFlip() {
     if (flipped || phase !== 'studying' || queue.length === 0) return
@@ -153,7 +204,7 @@ export default function StudyView({ active, store, allCards, updateStore, showTo
     const nextIdx = idx + 1
     if (nextIdx >= queue.length) {
       setShowAnswers(false)
-      setPhase('complete')
+      setPhaseSync('complete')
       setTimeout(() => playSound('complete'), 50)
     } else {
       setShowAnswers(false)
@@ -182,10 +233,29 @@ export default function StudyView({ active, store, allCards, updateStore, showTo
     { id: 'vocab',    label: t('filter_vocab')    },
   ]
 
+  const sourceOptions = [
+    { id: 'default', label: t('source_default') },
+    { id: 'custom',  label: t('source_custom')  },
+    { id: 'all',     label: t('source_all')     },
+  ]
+
   return (
     <div className={`view study-view ${active ? 'active' : ''}`}>
 
-      {/* Filter chips */}
+      {/* Source switch */}
+      <div className="source-switch">
+        {sourceOptions.map(opt => (
+          <button
+            key={opt.id}
+            className={`source-option ${store.cardSource === opt.id ? 'active' : ''}`}
+            onClick={() => { updateStore({ cardSource: opt.id }); playSound('tap') }}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Category filter chips */}
       <div className="filter-chips">
         {filterChips.map(chip => (
           <button
@@ -282,7 +352,7 @@ export default function StudyView({ active, store, allCards, updateStore, showTo
             setFlipped(false)
             setShowAnswers(false)
             setSessionStats({ correct: 0, incorrect: 0 })
-            setPhase(forced.length > 0 ? 'studying' : 'empty')
+            setPhaseSync(forced.length > 0 ? 'studying' : 'empty')
           }}>
             {t('empty_force')}
           </button>
